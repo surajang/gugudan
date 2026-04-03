@@ -1,0 +1,17 @@
+{
+  "name": "gugudan",
+  "version": "1.0.0",
+  "description": "구구단 게임 PWA",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.3.1",
+    "vite-plugin-pwa": "^0.21.1",
+    "typescript": "^5.8.3",
+    "workbox-window": "^7.3.0"
+  }
+}

@@ -1,0 +1,424 @@
+import './style.css';
+import { COUNT_OPTIONS, generateQuestions } from './game.ts';
+import type { Question, GameResult } from './game.ts';
+import { saveRecord, getRecords, formatDate } from './storage.ts';
+import type { Record } from './storage.ts';
+
+/* =============================================
+   App State
+   ============================================= */
+let selectedCount = 10;
+let questions: Question[] = [];
+let results: GameResult[] = [];
+let currentIndex = 0;
+let currentInput = '';
+let startTime = 0;
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+/* =============================================
+   Screen references
+   ============================================= */
+const app = document.getElementById('app')!;
+
+let homeScreen: HTMLElement;
+let countdownScreen: HTMLElement;
+let gameScreen: HTMLElement;
+let resultScreen: HTMLElement;
+let modal: HTMLElement;
+
+/* =============================================
+   Utility
+   ============================================= */
+function showScreen(target: HTMLElement) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  requestAnimationFrame(() => target.classList.add('active'));
+}
+
+function el<T extends HTMLElement>(tag: string, cls: string, html = ''): T {
+  const e = document.createElement(tag) as T;
+  if (cls) e.className = cls;
+  if (html) e.innerHTML = html;
+  return e;
+}
+
+/* =============================================
+   Home Screen
+   ============================================= */
+function buildHome() {
+  homeScreen = el('div', 'screen');
+  homeScreen.id = 'screen-home';
+
+  const logo = el('div', 'logo', '구구단 🔢');
+  const sub = el('div', 'logo-sub', '빠르게 풀고 기록을 남겨보세요');
+  const label = el('div', 'count-label', '문제 수 선택');
+
+  const grid = el('div', 'count-grid');
+  COUNT_OPTIONS.forEach(opt => {
+    const btn = el<HTMLButtonElement>('button', 'count-btn');
+    btn.id = `count-btn-${opt.value}`;
+    btn.innerHTML = `<span>${opt.label}<span class="sub">${opt.sub}</span></span>`;
+    btn.addEventListener('click', () => {
+      selectedCount = opt.value;
+      grid.querySelectorAll('.count-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      startBtn.disabled = false;
+    });
+    if (opt.value === selectedCount) {
+      btn.classList.add('selected');
+    }
+    grid.appendChild(btn);
+  });
+
+  const startBtn = el<HTMLButtonElement>('button', 'btn-primary', '도전하기 →');
+  startBtn.id = 'btn-start';
+  startBtn.addEventListener('click', startCountdown);
+
+  homeScreen.append(logo, sub, label, grid, startBtn);
+  app.appendChild(homeScreen);
+}
+
+/* =============================================
+   Countdown Screen
+   ============================================= */
+function buildCountdown() {
+  countdownScreen = el('div', 'screen');
+  countdownScreen.id = 'screen-countdown';
+
+  const numEl = el('div', 'countdown-number', '3');
+  numEl.id = 'countdown-num';
+  const labelEl = el('div', 'countdown-label', '준비하세요!');
+
+  countdownScreen.append(numEl, labelEl);
+  app.appendChild(countdownScreen);
+}
+
+function startCountdown() {
+  showScreen(countdownScreen);
+  questions = generateQuestions(selectedCount);
+  results = [];
+  currentIndex = 0;
+
+  const numEl = document.getElementById('countdown-num')!;
+  let count = 3;
+  numEl.textContent = String(count);
+
+  const tick = () => {
+    count--;
+    if (count <= 0) {
+      startGame();
+      return;
+    }
+    numEl.style.animation = 'none';
+    void numEl.offsetHeight; // reflow
+    numEl.style.animation = 'pulse-scale 1s ease-in-out';
+    numEl.textContent = String(count);
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 1000);
+}
+
+/* =============================================
+   Game Screen
+   ============================================= */
+function buildGame() {
+  gameScreen = el('div', 'screen');
+  gameScreen.id = 'screen-game';
+
+  // Header
+  const header = el('div', 'game-header');
+  const progress = el('div', 'game-progress', '1 / 10');
+  progress.id = 'game-progress';
+  const timer = el('div', 'game-timer', '0.0s');
+  timer.id = 'game-timer';
+  header.append(progress, timer);
+
+  // Progress bar
+  const barWrap = el('div', 'progress-bar-wrap');
+  const barFill = el('div', 'progress-bar-fill');
+  barFill.id = 'progress-bar';
+  barFill.style.width = '0%';
+  barWrap.appendChild(barFill);
+
+  // Question
+  const card = el('div', 'question-card');
+  const qText = el('div', 'question-text', '');
+  qText.id = 'question-text';
+  const eqText = el('div', 'question-eq', '=');
+  const answerDisplay = el('div', 'answer-display empty', '0');
+  answerDisplay.id = 'answer-display';
+  card.append(qText, eqText, answerDisplay);
+
+  // Hidden input for mobile
+  const hiddenInput = el<HTMLInputElement>('input', 'hidden-input');
+  hiddenInput.id = 'hidden-input';
+  hiddenInput.type = 'number';
+  hiddenInput.inputMode = 'numeric';
+  hiddenInput.autocomplete = 'off';
+
+  // Numpad
+  const numpad = buildNumpad();
+
+  gameScreen.append(header, barWrap, card, hiddenInput, numpad);
+  app.appendChild(gameScreen);
+
+  // PC keyboard support
+  document.addEventListener('keydown', handleKeyDown);
+}
+
+function buildNumpad(): HTMLElement {
+  const pad = el('div', 'numpad');
+  pad.id = 'numpad';
+
+  const layout = ['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
+  layout.forEach(key => {
+    const btn = el<HTMLButtonElement>('button', 'numpad-btn');
+    btn.textContent = key;
+    if (key === '⌫') btn.classList.add('delete');
+    if (key === '0') btn.classList.add('zero');
+    if (key === '✓') btn.classList.add('submit');
+    btn.id = `numpad-${key === '⌫' ? 'del' : key === '✓' ? 'submit' : key}`;
+
+    btn.addEventListener('click', () => {
+      if (key === '⌫') deleteDigit();
+      else if (key === '✓') submitAnswer();
+      else addDigit(key);
+    });
+    pad.appendChild(btn);
+  });
+  return pad;
+}
+
+function handleKeyDown(e: KeyboardEvent) {
+  if (!gameScreen.classList.contains('active')) return;
+  if (e.key >= '0' && e.key <= '9') addDigit(e.key);
+  else if (e.key === 'Backspace') deleteDigit();
+  else if (e.key === 'Enter') submitAnswer();
+}
+
+function addDigit(d: string) {
+  if (currentInput.length >= 3) return;
+  currentInput += d;
+  updateAnswerDisplay();
+}
+
+function deleteDigit() {
+  currentInput = currentInput.slice(0, -1);
+  updateAnswerDisplay();
+}
+
+function updateAnswerDisplay() {
+  const el = document.getElementById('answer-display')!;
+  if (currentInput === '') {
+    el.textContent = '0';
+    el.classList.add('empty');
+  } else {
+    el.textContent = currentInput;
+    el.classList.remove('empty');
+  }
+}
+
+function submitAnswer() {
+  if (currentInput === '') return;
+
+  const q = questions[currentIndex];
+  const userAnswer = parseInt(currentInput, 10);
+  const isCorrect = userAnswer === q.answer;
+
+  results.push({ question: q, userAnswer, isCorrect });
+  currentInput = '';
+  currentIndex++;
+
+  if (currentIndex >= questions.length) {
+    endGame();
+  } else {
+    renderCurrentQuestion();
+  }
+}
+
+function startGame() {
+  showScreen(gameScreen);
+  startTime = performance.now();
+  currentInput = '';
+
+  // Start elapsed timer display
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const elapsed = (performance.now() - startTime) / 1000;
+    const el = document.getElementById('game-timer');
+    if (el) el.textContent = elapsed.toFixed(1) + 's';
+  }, 100);
+
+  renderCurrentQuestion();
+}
+
+function renderCurrentQuestion() {
+  const q = questions[currentIndex];
+  const total = questions.length;
+
+  document.getElementById('question-text')!.textContent = `${q.a} × ${q.b}`;
+  document.getElementById('game-progress')!.textContent = `${currentIndex + 1} / ${total}`;
+  document.getElementById('progress-bar')!.style.width = `${(currentIndex / total) * 100}%`;
+  updateAnswerDisplay();
+
+  // Focus hidden input for mobile numpad
+  const input = document.getElementById('hidden-input') as HTMLInputElement;
+  input.value = '';
+  input.focus();
+}
+
+function endGame() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  const totalMs = performance.now() - startTime;
+  const totalSec = totalMs / 1000;
+  const avgTime = totalSec / questions.length;
+  const correct = results.filter(r => r.isCorrect).length;
+  const accuracy = Math.round((correct / questions.length) * 100);
+
+  const record: Record = {
+    date: formatDate(new Date()),
+    avgTime: Math.round(avgTime * 10) / 10,
+    correct,
+    total: questions.length,
+    accuracy,
+  };
+  saveRecord(record);
+  showResult(totalSec, avgTime, correct, accuracy);
+}
+
+/* =============================================
+   Result Screen
+   ============================================= */
+function buildResult() {
+  resultScreen = el('div', 'screen');
+  resultScreen.id = 'screen-result';
+  app.appendChild(resultScreen);
+}
+
+function buildModal() {
+  modal = el('div', 'modal-overlay');
+  modal.id = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-sheet" id="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">틀린 문제 목록</div>
+      <div class="wrong-list" id="wrong-list"></div>
+      <button class="btn-secondary modal-close" id="modal-close-btn">닫기</button>
+    </div>
+  `;
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  document.getElementById('modal-close-btn')?.addEventListener('click', closeModal);
+  app.appendChild(modal);
+}
+
+function openModal() {
+  const wrongList = results.filter(r => !r.isCorrect);
+  const listEl = document.getElementById('wrong-list')!;
+  listEl.innerHTML = wrongList.map(r => `
+    <div class="wrong-item">
+      <span class="wrong-question">${r.question.a} × ${r.question.b}</span>
+      <div class="wrong-answer-wrap">
+        <span class="wrong-yours">${r.userAnswer ?? '?'}</span>
+        <span class="wrong-correct">→ ${r.question.answer}</span>
+      </div>
+    </div>
+  `).join('');
+
+  modal.classList.add('open');
+}
+
+function closeModal() {
+  modal.classList.remove('open');
+}
+
+function showResult(totalSec: number, avgTime: number, correct: number, accuracy: number) {
+  // Clear and rebuild result screen
+  resultScreen.innerHTML = '';
+
+  const emoji = el('div', 'result-emoji', accuracy >= 90 ? '🎉' : accuracy >= 70 ? '👍' : '💪');
+  const title = el('div', 'result-title', '게임 종료');
+
+  // Stats
+  const statsGrid = el('div', 'stats-grid');
+  const stats = [
+    { value: totalSec.toFixed(1) + 's', label: '총 소요시간' },
+    { value: avgTime.toFixed(1) + 's', label: '문제당 평균' },
+    { value: `${correct}/${questions.length}`, label: '정답 수' },
+    { value: `${accuracy}%`, label: '정답률' },
+  ];
+  stats.forEach(s => {
+    const card = el('div', 'stat-card');
+    card.innerHTML = `<div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div>`;
+    statsGrid.appendChild(card);
+  });
+
+  // Actions
+  const actions = el('div', 'result-actions');
+
+  const wrongCount = results.filter(r => !r.isCorrect).length;
+  if (wrongCount > 0) {
+    const wrongBtn = el<HTMLButtonElement>('button', 'btn-secondary', `틀린 문제 보기 (${wrongCount}개)`);
+    wrongBtn.id = 'btn-wrong';
+    wrongBtn.addEventListener('click', openModal);
+    actions.appendChild(wrongBtn);
+  }
+
+  const retryBtn = el<HTMLButtonElement>('button', 'btn-primary', '다시하기');
+  retryBtn.id = 'btn-retry';
+  retryBtn.addEventListener('click', () => {
+    currentInput = '';
+    showScreen(homeScreen);
+  });
+  actions.appendChild(retryBtn);
+
+  // Leaderboard
+  const lbSection = buildLeaderboard();
+
+  resultScreen.append(emoji, title, statsGrid, actions, lbSection);
+  showScreen(resultScreen);
+}
+
+function buildLeaderboard(): HTMLElement {
+  const records = getRecords();
+  const section = el('div', 'leaderboard-section');
+
+  const title = el('div', 'leaderboard-title', '리더보드');
+  const list = el('div', 'leaderboard-list');
+
+  records.slice(0, 10).forEach((r, i) => {
+    const item = el('div', i === 0 ? 'leaderboard-item gold' : 'leaderboard-item');
+    item.innerHTML = `
+      <span class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}</span>
+      <span class="lb-date">${r.date}</span>
+      <span class="lb-stat">${r.avgTime}s/문제 · ${r.accuracy}%</span>
+    `;
+    list.appendChild(item);
+  });
+
+  if (records.length === 0) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">아직 기록이 없어요</div>';
+  }
+
+  section.append(title, list);
+  return section;
+}
+
+/* =============================================
+   Init
+   ============================================= */
+function init() {
+  buildHome();
+  buildCountdown();
+  buildGame();
+  buildResult();
+  buildModal();
+
+  // Show home on start
+  requestAnimationFrame(() => homeScreen.classList.add('active'));
+}
+
+init();

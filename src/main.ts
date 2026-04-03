@@ -155,17 +155,10 @@ function buildGame() {
   answerDisplay.id = 'answer-display';
   card.append(qText, eqText, answerDisplay);
 
-  // Hidden input for mobile
-  const hiddenInput = el<HTMLInputElement>('input', 'hidden-input');
-  hiddenInput.id = 'hidden-input';
-  hiddenInput.type = 'number';
-  hiddenInput.inputMode = 'numeric';
-  hiddenInput.autocomplete = 'off';
-
   // Numpad
   const numpad = buildNumpad();
 
-  gameScreen.append(header, barWrap, card, hiddenInput, numpad);
+  gameScreen.append(header, barWrap, card, numpad);
   app.appendChild(gameScreen);
 
   // PC keyboard support
@@ -267,10 +260,6 @@ function renderCurrentQuestion() {
   document.getElementById('progress-bar')!.style.width = `${(currentIndex / total) * 100}%`;
   updateAnswerDisplay();
 
-  // Focus hidden input for mobile numpad
-  const input = document.getElementById('hidden-input') as HTMLInputElement;
-  input.value = '';
-  input.focus();
 }
 
 function endGame() {

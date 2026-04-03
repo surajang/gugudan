@@ -73,7 +73,14 @@ function buildHome() {
   startBtn.id = 'btn-start';
   startBtn.addEventListener('click', startCountdown);
 
-  homeScreen.append(logo, sub, label, grid, startBtn);
+  const lbBtn = el<HTMLButtonElement>('button', 'btn-secondary', '리더보드 보기');
+  lbBtn.style.width = '100%';
+  lbBtn.style.maxWidth = '320px';
+  lbBtn.style.marginTop = '12px';
+  lbBtn.id = 'btn-home-leaderboard';
+  lbBtn.addEventListener('click', openLeaderboardModal);
+
+  homeScreen.append(logo, sub, label, grid, startBtn, lbBtn);
   app.appendChild(homeScreen);
 }
 
@@ -303,22 +310,33 @@ function buildModal() {
   modal.innerHTML = `
     <div class="modal-sheet" id="modal-sheet">
       <div class="modal-handle"></div>
-      <div class="modal-title">틀린 문제 목록</div>
-      <div class="wrong-list" id="wrong-list"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div id="modal-content"></div>
       <button class="btn-secondary modal-close" id="modal-close-btn">닫기</button>
     </div>
   `;
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });
-  document.getElementById('modal-close-btn')?.addEventListener('click', closeModal);
   app.appendChild(modal);
+  document.getElementById('modal-close-btn')?.addEventListener('click', closeModal);
 }
 
-function openModal() {
+function openModal(title: string, content: string | HTMLElement) {
+  document.getElementById('modal-title')!.textContent = title;
+  const contentEl = document.getElementById('modal-content')!;
+  if (typeof content === 'string') {
+    contentEl.innerHTML = content;
+  } else {
+    contentEl.innerHTML = '';
+    contentEl.appendChild(content);
+  }
+  modal.classList.add('open');
+}
+
+function openWrongModal() {
   const wrongList = results.filter(r => !r.isCorrect);
-  const listEl = document.getElementById('wrong-list')!;
-  listEl.innerHTML = wrongList.map(r => `
+  const html = '<div class="wrong-list">' + wrongList.map(r => `
     <div class="wrong-item">
       <span class="wrong-question">${r.question.a} × ${r.question.b}</span>
       <div class="wrong-answer-wrap">
@@ -326,9 +344,15 @@ function openModal() {
         <span class="wrong-correct">→ ${r.question.answer}</span>
       </div>
     </div>
-  `).join('');
+  `).join('') + '</div>';
+  openModal('틀린 문제 목록', html);
+}
 
-  modal.classList.add('open');
+function openLeaderboardModal() {
+  const lbSection = buildLeaderboard();
+  lbSection.querySelector('.leaderboard-title')?.remove();
+  lbSection.style.marginTop = '0';
+  openModal('리더보드 보기', lbSection);
 }
 
 function closeModal() {
@@ -363,7 +387,7 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
   if (wrongCount > 0) {
     const wrongBtn = el<HTMLButtonElement>('button', 'btn-secondary', `틀린 문제 보기 (${wrongCount}개)`);
     wrongBtn.id = 'btn-wrong';
-    wrongBtn.addEventListener('click', openModal);
+    wrongBtn.addEventListener('click', openWrongModal);
     actions.appendChild(wrongBtn);
   }
 
@@ -383,7 +407,10 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
 }
 
 function buildLeaderboard(): HTMLElement {
-  const records = getRecords();
+  const records = getRecords().sort((a, b) => {
+    if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
+    return a.avgTime - b.avgTime;
+  });
   const section = el('div', 'leaderboard-section');
 
   const title = el('div', 'leaderboard-title', '리더보드');

@@ -1,8 +1,8 @@
 import './style.css';
-import { COUNT_OPTIONS, generateQuestions } from './game.ts';
-import type { Question, GameResult } from './game.ts';
-import { saveRecord, getRecords, formatDate } from './storage.ts';
-import type { Record } from './storage.ts';
+import { COUNT_OPTIONS, generateQuestions } from './game';
+import type { Question, GameResult } from './game';
+import { saveRecord, getRecords, formatDate } from './storage';
+import type { Record } from './storage';
 
 /* =============================================
    App State

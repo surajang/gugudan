@@ -48,9 +48,9 @@ function buildHome() {
   homeScreen = el('div', 'screen');
   homeScreen.id = 'screen-home';
 
-  const logo = el('div', 'logo', '구구단 🔢');
-  const sub = el('div', 'logo-sub', '빠르게 풀고 기록을 남겨보세요');
-  const label = el('div', 'count-label', '문제 수 선택');
+  const logo = el('div', 'logo', '구구단');
+  const sub = el('div', 'logo-sub', '한계에 도전해 보세요');
+  const label = el('div', 'count-label', '도전과제 선택');
 
   const grid = el('div', 'count-grid');
   COUNT_OPTIONS.forEach(opt => {
@@ -69,11 +69,11 @@ function buildHome() {
     grid.appendChild(btn);
   });
 
-  const startBtn = el<HTMLButtonElement>('button', 'btn-primary', '도전하기 →');
+  const startBtn = el<HTMLButtonElement>('button', 'btn-primary', '도전 →');
   startBtn.id = 'btn-start';
   startBtn.addEventListener('click', startCountdown);
 
-  const lbBtn = el<HTMLButtonElement>('button', 'btn-secondary', '리더보드 보기');
+  const lbBtn = el<HTMLButtonElement>('button', 'btn-secondary', '리더보드');
   lbBtn.style.width = '100%';
   lbBtn.style.maxWidth = '320px';
   lbBtn.style.marginTop = '12px';
@@ -169,7 +169,7 @@ function buildNumpad(): HTMLElement {
   const pad = el('div', 'numpad');
   pad.id = 'numpad';
 
-  const layout = ['1','2','3','4','5','6','7','8','9','⌫','0','✓'];
+  const layout = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✓'];
   layout.forEach(key => {
     const btn = el<HTMLButtonElement>('button', 'numpad-btn');
     btn.textContent = key;

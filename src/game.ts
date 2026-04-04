@@ -11,11 +11,15 @@ export interface GameResult {
 }
 
 /** 2~9단 모든 문제(72개) 생성 후 Fisher-Yates 셔플 */
-export function generateQuestions(count: number): Question[] {
+export function generateQuestions(count: number, mode: 'multiply' | 'divide'): Question[] {
   const all: Question[] = [];
-  for (let a = 2; a <= 9; a++) {
-    for (let b = 1; b <= 9; b++) {
-      all.push({ a, b, answer: a * b });
+  for (let m = 2; m <= 9; m++) {
+    for (let n = 1; n <= 9; n++) {
+      if (mode === 'multiply') {
+        all.push({ a: m, b: n, answer: m * n });
+      } else {
+        all.push({ a: m * n, b: m, answer: n });
+      }
     }
   }
   // Fisher-Yates shuffle

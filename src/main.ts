@@ -8,6 +8,7 @@ import type { Record } from './storage';
    App State
    ============================================= */
 let selectedCount = 10;
+let selectedMode: 'multiply' | 'divide' = 'multiply';
 let questions: Question[] = [];
 let results: GameResult[] = [];
 let currentIndex = 0;
@@ -52,6 +53,22 @@ function buildHome() {
   const sub = el('div', 'logo-sub', '한계에 도전해 보세요');
   const label = el('div', 'count-label', '도전과제 선택');
 
+  const modeWrap = el('div', 'mode-wrap');
+  const mulBtn = el<HTMLButtonElement>('button', 'mode-btn selected', '×');
+  const divBtn = el<HTMLButtonElement>('button', 'mode-btn', '÷');
+
+  mulBtn.addEventListener('click', () => {
+    selectedMode = 'multiply';
+    mulBtn.classList.add('selected');
+    divBtn.classList.remove('selected');
+  });
+  divBtn.addEventListener('click', () => {
+    selectedMode = 'divide';
+    divBtn.classList.add('selected');
+    mulBtn.classList.remove('selected');
+  });
+  modeWrap.append(mulBtn, divBtn);
+
   const grid = el('div', 'count-grid');
   COUNT_OPTIONS.forEach(opt => {
     const btn = el<HTMLButtonElement>('button', 'count-btn');
@@ -80,7 +97,7 @@ function buildHome() {
   lbBtn.id = 'btn-home-leaderboard';
   lbBtn.addEventListener('click', openLeaderboardModal);
 
-  homeScreen.append(logo, sub, label, grid, startBtn, lbBtn);
+  homeScreen.append(logo, sub, modeWrap, label, grid, startBtn, lbBtn);
   app.appendChild(homeScreen);
 }
 
@@ -101,7 +118,7 @@ function buildCountdown() {
 
 function startCountdown() {
   showScreen(countdownScreen);
-  questions = generateQuestions(selectedCount);
+  questions = generateQuestions(selectedCount, selectedMode);
   results = [];
   currentIndex = 0;
 
@@ -256,7 +273,8 @@ function renderCurrentQuestion() {
   const q = questions[currentIndex];
   const total = questions.length;
 
-  document.getElementById('question-text')!.textContent = `${q.a} × ${q.b}`;
+  const op = selectedMode === 'multiply' ? '×' : '÷';
+  document.getElementById('question-text')!.textContent = `${q.a} ${op} ${q.b}`;
   document.getElementById('game-progress')!.textContent = `${currentIndex + 1} / ${total}`;
   document.getElementById('progress-bar')!.style.width = `${(currentIndex / total) * 100}%`;
   updateAnswerDisplay();
@@ -280,6 +298,7 @@ function endGame() {
     correct,
     total: questions.length,
     accuracy,
+    mode: selectedMode,
   };
   saveRecord(record);
   showResult(totalSec, avgTime, correct, accuracy);
@@ -326,15 +345,17 @@ function openModal(title: string, content: string | HTMLElement) {
 
 function openWrongModal() {
   const wrongList = results.filter(r => !r.isCorrect);
-  const html = '<div class="wrong-list">' + wrongList.map(r => `
+  const html = '<div class="wrong-list">' + wrongList.map(r => {
+    const op = selectedMode === 'multiply' ? '×' : '÷';
+    return `
     <div class="wrong-item">
-      <span class="wrong-question">${r.question.a} × ${r.question.b}</span>
+      <span class="wrong-question">${r.question.a} ${op} ${r.question.b}</span>
       <div class="wrong-answer-wrap">
         <span class="wrong-yours">${r.userAnswer ?? '?'}</span>
         <span class="wrong-correct">→ ${r.question.answer}</span>
       </div>
     </div>
-  `).join('') + '</div>';
+  `}).join('') + '</div>';
   openModal('틀린 문제 목록', html);
 }
 
@@ -397,30 +418,62 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
 }
 
 function buildLeaderboard(): HTMLElement {
-  const records = getRecords().sort((a, b) => {
-    if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
-    return a.avgTime - b.avgTime;
-  });
   const section = el('div', 'leaderboard-section');
-
   const title = el('div', 'leaderboard-title', '리더보드');
+
+  // Tabs
+  const tabWrap = el('div', 'lb-tabs');
+  const mulTab = el<HTMLButtonElement>('button', 'lb-tab', '곱셈');
+  const divTab = el<HTMLButtonElement>('button', 'lb-tab', '나눗셈');
+  tabWrap.append(mulTab, divTab);
+
   const list = el('div', 'leaderboard-list');
 
-  records.slice(0, 10).forEach((r, i) => {
-    const item = el('div', i === 0 ? 'leaderboard-item gold' : 'leaderboard-item');
-    item.innerHTML = `
-      <span class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}</span>
-      <span class="lb-date">${r.date}</span>
-      <span class="lb-stat">${r.avgTime}s/문제 · ${r.accuracy}%</span>
-    `;
-    list.appendChild(item);
-  });
+  function renderList(modeFilter: 'multiply' | 'divide') {
+    list.innerHTML = '';
+    const records = getRecords()
+      .filter(r => (r.mode || 'multiply') === modeFilter)
+      .sort((a, b) => {
+        if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
+        return a.avgTime - b.avgTime;
+      });
 
-  if (records.length === 0) {
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">아직 기록이 없어요</div>';
+    records.slice(0, 10).forEach((r, i) => {
+      const item = el('div', i === 0 ? 'leaderboard-item gold' : 'leaderboard-item');
+      item.innerHTML = `
+        <span class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}</span>
+        <span class="lb-date">${r.date}</span>
+        <span class="lb-stat">${r.avgTime}s/문제 · ${r.accuracy}%</span>
+      `;
+      list.appendChild(item);
+    });
+
+    if (records.length === 0) {
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">아직 기록이 없어요</div>';
+    }
   }
 
-  section.append(title, list);
+  mulTab.addEventListener('click', () => {
+    mulTab.classList.add('active');
+    divTab.classList.remove('active');
+    renderList('multiply');
+  });
+  divTab.addEventListener('click', () => {
+    divTab.classList.add('active');
+    mulTab.classList.remove('active');
+    renderList('divide');
+  });
+
+  // Init
+  if (selectedMode === 'divide') {
+    divTab.classList.add('active');
+    renderList('divide');
+  } else {
+    mulTab.classList.add('active');
+    renderList('multiply');
+  }
+
+  section.append(title, tabWrap, list);
   return section;
 }
 

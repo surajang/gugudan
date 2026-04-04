@@ -178,7 +178,8 @@ function buildNumpad(): HTMLElement {
     if (key === '✓') btn.classList.add('submit');
     btn.id = `numpad-${key === '⌫' ? 'del' : key === '✓' ? 'submit' : key}`;
 
-    btn.addEventListener('click', () => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       if (key === '⌫') deleteDigit();
       else if (key === '✓') submitAnswer();
       else addDigit(key);

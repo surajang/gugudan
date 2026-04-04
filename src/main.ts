@@ -54,8 +54,8 @@ function buildHome() {
   const label = el('div', 'count-label', '도전과제 선택');
 
   const modeWrap = el('div', 'mode-wrap');
-  const mulBtn = el<HTMLButtonElement>('button', 'mode-btn selected', '×');
-  const divBtn = el<HTMLButtonElement>('button', 'mode-btn', '÷');
+  const mulBtn = el<HTMLButtonElement>('button', 'mode-btn selected', '× Normal');
+  const divBtn = el<HTMLButtonElement>('button', 'mode-btn', '÷ Reverse');
 
   mulBtn.addEventListener('click', () => {
     selectedMode = 'multiply';
@@ -363,7 +363,7 @@ function openLeaderboardModal() {
   const lbSection = buildLeaderboard();
   lbSection.querySelector('.leaderboard-title')?.remove();
   lbSection.style.marginTop = '0';
-  openModal('리더보드 보기', lbSection);
+  openModal('리더보드', lbSection);
 }
 
 function closeModal() {
@@ -423,8 +423,8 @@ function buildLeaderboard(): HTMLElement {
 
   // Tabs
   const tabWrap = el('div', 'lb-tabs');
-  const mulTab = el<HTMLButtonElement>('button', 'lb-tab', '곱셈');
-  const divTab = el<HTMLButtonElement>('button', 'lb-tab', '나눗셈');
+  const mulTab = el<HTMLButtonElement>('button', 'lb-tab', 'Normal');
+  const divTab = el<HTMLButtonElement>('button', 'lb-tab', 'Reverse');
   tabWrap.append(mulTab, divTab);
 
   const list = el('div', 'leaderboard-list');

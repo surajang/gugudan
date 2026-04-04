@@ -6,6 +6,7 @@ export interface Record {
   correct: number;
   total: number;
   accuracy: number;     // %
+  mode?: 'multiply' | 'divide';
 }
 
 export function saveRecord(record: Record): void {

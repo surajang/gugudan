@@ -113,6 +113,40 @@ html, body {
 }
 
 /* =============================================
+   Mode Selector
+   ============================================= */
+.mode-wrap {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.mode-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 4px);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn.selected {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* =============================================
    Count Mode Selector (Home)
    ============================================= */
 .count-label {
@@ -608,6 +642,33 @@ html, body {
 .leaderboard-title::before {
   content: '🏆';
   font-size: 0.9rem;
+}
+
+.lb-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lb-tab {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.lb-tab.active {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: var(--accent);
+  color: var(--accent-light);
 }
 
 .leaderboard-list {

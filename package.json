@@ -13,5 +13,8 @@
     "vite-plugin-pwa": "^0.21.1",
     "typescript": "^5.8.3",
     "workbox-window": "^7.3.0"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
   }
 }

@@ -294,7 +294,7 @@ function endGame() {
 
   const record: Record = {
     date: formatDate(new Date()),
-    avgTime: Math.round(avgTime * 10) / 10,
+    avgTime: avgTime,
     correct,
     total: questions.length,
     accuracy,
@@ -402,7 +402,7 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
     actions.appendChild(wrongBtn);
   }
 
-  const retryBtn = el<HTMLButtonElement>('button', 'btn-primary', '다시하기');
+  const retryBtn = el<HTMLButtonElement>('button', 'btn-primary', '첫 화면으로');
   retryBtn.id = 'btn-retry';
   retryBtn.addEventListener('click', () => {
     currentInput = '';
@@ -411,21 +411,20 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
   actions.appendChild(retryBtn);
 
   // Leaderboard
-  const lbSection = buildLeaderboard();
+  const lbSection = buildLeaderboard(selectedMode);
 
   resultScreen.append(emoji, title, statsGrid, actions, lbSection);
   showScreen(resultScreen);
 }
 
-function buildLeaderboard(): HTMLElement {
+function buildLeaderboard(onlyMode?: 'multiply' | 'divide'): HTMLElement {
   const section = el('div', 'leaderboard-section');
-  const title = el('div', 'leaderboard-title', '리더보드');
-
-  // Tabs
-  const tabWrap = el('div', 'lb-tabs');
-  const mulTab = el<HTMLButtonElement>('button', 'lb-tab', 'Normal');
-  const divTab = el<HTMLButtonElement>('button', 'lb-tab', 'Reverse');
-  tabWrap.append(mulTab, divTab);
+  
+  const titleText = onlyMode 
+    ? `리더보드 (${onlyMode === 'multiply' ? 'Normal' : 'Reverse'})` 
+    : '리더보드';
+  const title = el('div', 'leaderboard-title', titleText);
+  section.append(title);
 
   const list = el('div', 'leaderboard-list');
 
@@ -443,7 +442,7 @@ function buildLeaderboard(): HTMLElement {
       item.innerHTML = `
         <span class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}</span>
         <span class="lb-date">${r.date}</span>
-        <span class="lb-stat">${r.avgTime}s/문제 · ${r.accuracy}%</span>
+        <span class="lb-stat">${r.avgTime.toFixed(1)}s/문제 · ${r.accuracy}%</span>
       `;
       list.appendChild(item);
     });
@@ -453,27 +452,38 @@ function buildLeaderboard(): HTMLElement {
     }
   }
 
-  mulTab.addEventListener('click', () => {
-    mulTab.classList.add('active');
-    divTab.classList.remove('active');
-    renderList('multiply');
-  });
-  divTab.addEventListener('click', () => {
-    divTab.classList.add('active');
-    mulTab.classList.remove('active');
-    renderList('divide');
-  });
-
-  // Init
-  if (selectedMode === 'divide') {
-    divTab.classList.add('active');
-    renderList('divide');
+  if (onlyMode) {
+    renderList(onlyMode);
   } else {
-    mulTab.classList.add('active');
-    renderList('multiply');
+    // Tabs
+    const tabWrap = el('div', 'lb-tabs');
+    const mulTab = el<HTMLButtonElement>('button', 'lb-tab', 'Normal');
+    const divTab = el<HTMLButtonElement>('button', 'lb-tab', 'Reverse');
+    tabWrap.append(mulTab, divTab);
+
+    mulTab.addEventListener('click', () => {
+      mulTab.classList.add('active');
+      divTab.classList.remove('active');
+      renderList('multiply');
+    });
+    divTab.addEventListener('click', () => {
+      divTab.classList.add('active');
+      mulTab.classList.remove('active');
+      renderList('divide');
+    });
+
+    // Init
+    if (selectedMode === 'divide') {
+      divTab.classList.add('active');
+      renderList('divide');
+    } else {
+      mulTab.classList.add('active');
+      renderList('multiply');
+    }
+    section.append(tabWrap);
   }
 
-  section.append(title, tabWrap, list);
+  section.append(list);
   return section;
 }
 

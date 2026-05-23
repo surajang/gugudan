@@ -5,6 +5,15 @@ const now = new Date();
 const pad = (n: number) => String(n).padStart(2, '0');
 const buildTime = `${now.getFullYear().toString().slice(-2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
 
+const secretMessage = '<!-- Secret: 7ZiV7Jqw7J2YIOq1rOq1rOuLqCDsl7DsirXsnYQg7JyE7ZW0IOygnOuvuOuCmOydtOyZgCDrp4zrk6Ag7IaM7IaM7ZWcIOyVseyeheuLiOuLpC4g7Je07Ius7Z6IIOyXsOyKte2VtOyEnCDsnpgg7ZWgIOyImCDsnojqsowg65CcIO2YleyasOqwgCDrjIDqsqztlZjqs6Ag66mL7KeA6rOgIOqzoOunmeuLpCA6KQ== -->';
+
+const injectSecretPlugin = () => ({
+  name: 'inject-secret-comment',
+  transformIndexHtml(html: string) {
+    return html.replace('</body>', `</body>\n${secretMessage}`);
+  }
+});
+
 export default defineConfig({
   base: './',
   define: {
@@ -58,6 +67,7 @@ export default defineConfig({
           }
         ]
       }
-    })
+    }),
+    injectSecretPlugin()
   ]
 })

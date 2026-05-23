@@ -191,7 +191,25 @@ function buildGame() {
   // Numpad
   const numpad = buildNumpad();
 
-  gameScreen.append(header, barWrap, card, numpad);
+  // Quit Button
+  const quitBtn = el<HTMLButtonElement>('button', 'btn-quit', '게임중단');
+  quitBtn.id = 'btn-quit';
+  quitBtn.addEventListener('click', () => {
+    const confirmQuit = confirm('게임을 포기하고 첫화면으로 돌아갈까요?');
+    if (confirmQuit) {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      currentInput = '';
+      results = [];
+      questions = [];
+      currentIndex = 0;
+      showScreen(homeScreen);
+    }
+  });
+
+  gameScreen.append(header, barWrap, quitBtn, card, numpad);
   app.appendChild(gameScreen);
 
   // PC keyboard support

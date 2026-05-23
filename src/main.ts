@@ -31,6 +31,7 @@ let modal: HTMLElement;
    Utility
    ============================================= */
 function showScreen(target: HTMLElement) {
+  (document.activeElement as HTMLElement)?.blur();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   requestAnimationFrame(() => target.classList.add('active'));
 }
@@ -208,9 +209,18 @@ function buildNumpad(): HTMLElement {
 
 function handleKeyDown(e: KeyboardEvent) {
   if (!gameScreen.classList.contains('active')) return;
-  if (e.key >= '0' && e.key <= '9') addDigit(e.key);
-  else if (e.key === 'Backspace') deleteDigit();
-  else if (e.key === 'Enter') submitAnswer();
+  if (e.key >= '0' && e.key <= '9') {
+    e.preventDefault();
+    addDigit(e.key);
+  } else if (e.key === 'Backspace') {
+    e.preventDefault();
+    deleteDigit();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    submitAnswer();
+  } else if (e.key === ' ') {
+    e.preventDefault();
+  }
 }
 
 function addDigit(d: string) {

@@ -1,8 +1,17 @@
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const now = new Date();
+const pad = (n: number) => String(n).padStart(2, '0');
+const buildTime = `${now.getFullYear().toString().slice(-2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+
 export default defineConfig({
   base: './',
+  define: {
+    __BUILD_INFO__: JSON.stringify({
+      buildTime: buildTime
+    })
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',

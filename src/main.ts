@@ -610,11 +610,18 @@ function buildLeaderboard(onlyMode?: 'multiply' | 'divide'): HTMLElement {
   return section;
 }
 
+function updateTitle() {
+  const baseTitle = currentLang === 'ko' ? '구구단 게임' : 'Gugudan Game';
+  const buildSuffix = typeof __BUILD_INFO__ !== 'undefined' ? ` (${__BUILD_INFO__.buildTime})` : '';
+  document.title = `${baseTitle}${buildSuffix}`;
+}
+
 /* =============================================
    Init
    ============================================= */
 function init() {
   app.innerHTML = ''; // Clear existing contents for dynamic re-render in i18n
+  updateTitle();
   buildHome();
   buildCountdown();
   buildGame();

@@ -1,6 +1,6 @@
 {
   "name": "gugudan",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "구구단 게임 PWA",
   "type": "module",
   "scripts": {

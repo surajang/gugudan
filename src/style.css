@@ -791,3 +791,33 @@ html, body {
 .btn-quit:active {
   transform: translateY(0);
 }
+
+/* =============================================
+   Language Toggle Button
+   ============================================= */
+.lang-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.lang-btn:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+  color: var(--accent-light);
+  transform: translateY(-1px);
+}
+
+.lang-btn:active {
+  transform: translateY(0);
+}

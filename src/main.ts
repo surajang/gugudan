@@ -16,6 +16,62 @@ let currentInput = '';
 let startTime = 0;
 let timerInterval: ReturnType<typeof setInterval> | null = null;
 
+// i18n support
+const TRANSLATIONS = {
+  ko: {
+    logo: '구구단',
+    logoSub: '한계에 도전해 보세요',
+    challengeLabel: '도전과제 선택',
+    normalMode: '× Normal',
+    reverseMode: '÷ Reverse',
+    challengeBtn: '도전 →',
+    leaderboardBtn: '리더보드',
+    countdownLabel: '준비하세요!',
+    totalTime: '총 소요시간',
+    avgTime: '문제당 평균',
+    correctCount: '정답 수',
+    accuracyLabel: '정답률',
+    wrongAnswersTitle: '틀린 문제 목록',
+    firstScreenBtn: '첫 화면으로',
+    leaderboardTitle: '리더보드',
+    noRecords: '아직 기록이 없어요',
+    closeBtn: '닫기',
+    confirmQuit: '게임을 포기하고 첫화면으로 돌아갈까요?',
+    secondsPerQuestion: 's/문제',
+    gameEnded: '게임 종료',
+    quitBtn: '게임중단'
+  },
+  en: {
+    logo: 'Gugudan',
+    logoSub: 'Challenge your limits',
+    challengeLabel: 'Select Challenge',
+    normalMode: '× Normal',
+    reverseMode: '÷ Reverse',
+    challengeBtn: 'Start →',
+    leaderboardBtn: 'Leaderboard',
+    countdownLabel: 'Get Ready!',
+    totalTime: 'Total Time',
+    avgTime: 'Avg Time/Q',
+    correctCount: 'Correct',
+    accuracyLabel: 'Accuracy',
+    wrongAnswersTitle: 'Incorrect Answers',
+    firstScreenBtn: 'Home',
+    leaderboardTitle: 'Leaderboard',
+    noRecords: 'No records yet',
+    closeBtn: 'Close',
+    confirmQuit: 'Are you sure you want to quit the game and return to the main screen?',
+    secondsPerQuestion: 's/Q',
+    gameEnded: 'Game Over',
+    quitBtn: 'Forfeit'
+  }
+};
+
+let currentLang: 'ko' | 'en' = (localStorage.getItem('gugudan_lang') || (navigator.language.startsWith('ko') ? 'ko' : 'en')) as 'ko' | 'en';
+
+function t(key: keyof typeof TRANSLATIONS['ko']): string {
+  return TRANSLATIONS[currentLang][key] || key;
+}
+
 /* =============================================
    Screen references
    ============================================= */
@@ -50,13 +106,13 @@ function buildHome() {
   homeScreen = el('div', 'screen');
   homeScreen.id = 'screen-home';
 
-  const logo = el('div', 'logo', '구구단');
-  const sub = el('div', 'logo-sub', '한계에 도전해 보세요');
-  const label = el('div', 'count-label', '도전과제 선택');
+  const logo = el('div', 'logo', t('logo'));
+  const sub = el('div', 'logo-sub', t('logoSub'));
+  const label = el('div', 'count-label', t('challengeLabel'));
 
   const modeWrap = el('div', 'mode-wrap');
-  const mulBtn = el<HTMLButtonElement>('button', 'mode-btn selected', '× Normal');
-  const divBtn = el<HTMLButtonElement>('button', 'mode-btn', '÷ Reverse');
+  const mulBtn = el<HTMLButtonElement>('button', `mode-btn${selectedMode === 'multiply' ? ' selected' : ''}`, t('normalMode'));
+  const divBtn = el<HTMLButtonElement>('button', `mode-btn${selectedMode === 'divide' ? ' selected' : ''}`, t('reverseMode'));
 
   mulBtn.addEventListener('click', () => {
     selectedMode = 'multiply';
@@ -74,7 +130,17 @@ function buildHome() {
   COUNT_OPTIONS.forEach(opt => {
     const btn = el<HTMLButtonElement>('button', 'count-btn');
     btn.id = `count-btn-${opt.value}`;
-    btn.innerHTML = `<span>${opt.label}<span class="sub">${opt.sub}</span></span>`;
+    
+    let labelText = opt.label;
+    let subText = opt.sub;
+    if (currentLang === 'en') {
+      if (opt.value === 10) { labelText = '10 Qs'; subText = 'Quick challenge'; }
+      else if (opt.value === 20) { labelText = '20 Qs'; subText = 'Normal difficulty'; }
+      else if (opt.value === 30) { labelText = '30 Qs'; subText = 'Ample practice'; }
+      else if (opt.value === 72) { labelText = 'All'; subText = 'Master 72 Qs'; }
+    }
+    
+    btn.innerHTML = `<span>${labelText}<span class="sub">${subText}</span></span>`;
     btn.addEventListener('click', () => {
       selectedCount = opt.value;
       grid.querySelectorAll('.count-btn').forEach(b => b.classList.remove('selected'));
@@ -87,11 +153,11 @@ function buildHome() {
     grid.appendChild(btn);
   });
 
-  const startBtn = el<HTMLButtonElement>('button', 'btn-primary', '도전 →');
+  const startBtn = el<HTMLButtonElement>('button', 'btn-primary', t('challengeBtn'));
   startBtn.id = 'btn-start';
   startBtn.addEventListener('click', startCountdown);
 
-  const lbBtn = el<HTMLButtonElement>('button', 'btn-secondary', '리더보드');
+  const lbBtn = el<HTMLButtonElement>('button', 'btn-secondary', t('leaderboardBtn'));
   lbBtn.style.width = '100%';
   lbBtn.style.maxWidth = '320px';
   lbBtn.style.marginTop = '12px';
@@ -113,7 +179,16 @@ function buildHome() {
     </svg>
   `;
 
-  homeScreen.append(logo, sub, modeWrap, label, grid, startBtn, lbBtn, gitLink);
+  // Language Toggle Button
+  const langBtn = el<HTMLButtonElement>('button', 'lang-btn', currentLang === 'ko' ? '🌐 English' : '🌐 한국어');
+  langBtn.id = 'btn-lang';
+  langBtn.addEventListener('click', () => {
+    currentLang = currentLang === 'ko' ? 'en' : 'ko';
+    localStorage.setItem('gugudan_lang', currentLang);
+    init();
+  });
+
+  homeScreen.append(logo, sub, modeWrap, label, grid, startBtn, lbBtn, gitLink, langBtn);
   app.appendChild(homeScreen);
 }
 
@@ -126,7 +201,7 @@ function buildCountdown() {
 
   const numEl = el('div', 'countdown-number', '3');
   numEl.id = 'countdown-num';
-  const labelEl = el('div', 'countdown-label', '준비하세요!');
+  const labelEl = el('div', 'countdown-label', t('countdownLabel'));
 
   countdownScreen.append(numEl, labelEl);
   app.appendChild(countdownScreen);
@@ -192,10 +267,10 @@ function buildGame() {
   const numpad = buildNumpad();
 
   // Quit Button
-  const quitBtn = el<HTMLButtonElement>('button', 'btn-quit', '게임중단');
+  const quitBtn = el<HTMLButtonElement>('button', 'btn-quit', t('quitBtn'));
   quitBtn.id = 'btn-quit';
   quitBtn.addEventListener('click', () => {
-    const confirmQuit = confirm('게임을 포기하고 첫화면으로 돌아갈까요?');
+    const confirmQuit = confirm(t('confirmQuit'));
     if (confirmQuit) {
       if (timerInterval) {
         clearInterval(timerInterval);
@@ -321,7 +396,6 @@ function renderCurrentQuestion() {
   document.getElementById('game-progress')!.textContent = `${currentIndex + 1} / ${total}`;
   document.getElementById('progress-bar')!.style.width = `${(currentIndex / total) * 100}%`;
   updateAnswerDisplay();
-
 }
 
 function endGame() {
@@ -364,7 +438,7 @@ function buildModal() {
       <div class="modal-handle"></div>
       <div class="modal-title" id="modal-title"></div>
       <div id="modal-content"></div>
-      <button class="btn-secondary modal-close" id="modal-close-btn">닫기</button>
+      <button class="btn-secondary modal-close" id="modal-close-btn">${t('closeBtn')}</button>
     </div>
   `;
   modal.addEventListener('click', (e) => {
@@ -399,14 +473,14 @@ function openWrongModal() {
       </div>
     </div>
   `}).join('') + '</div>';
-  openModal('틀린 문제 목록', html);
+  openModal(t('wrongAnswersTitle'), html);
 }
 
 function openLeaderboardModal() {
   const lbSection = buildLeaderboard();
   lbSection.querySelector('.leaderboard-title')?.remove();
   lbSection.style.marginTop = '0';
-  openModal('리더보드', lbSection);
+  openModal(t('leaderboardTitle'), lbSection);
 }
 
 function closeModal() {
@@ -418,15 +492,15 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
   resultScreen.innerHTML = '';
 
   const emoji = el('div', 'result-emoji', accuracy >= 90 ? '🎉' : accuracy >= 70 ? '👍' : '💪');
-  const title = el('div', 'result-title', '게임 종료');
+  const title = el('div', 'result-title', t('gameEnded'));
 
   // Stats
   const statsGrid = el('div', 'stats-grid');
   const stats = [
-    { value: totalSec.toFixed(1) + 's', label: '총 소요시간' },
-    { value: avgTime.toFixed(1) + 's', label: '문제당 평균' },
-    { value: `${correct}/${questions.length}`, label: '정답 수' },
-    { value: `${accuracy}%`, label: '정답률' },
+    { value: totalSec.toFixed(1) + 's', label: t('totalTime') },
+    { value: avgTime.toFixed(1) + 's', label: t('avgTime') },
+    { value: `${correct}/${questions.length}`, label: t('correctCount') },
+    { value: `${accuracy}%`, label: t('accuracyLabel') },
   ];
   stats.forEach(s => {
     const card = el('div', 'stat-card');
@@ -439,13 +513,16 @@ function showResult(totalSec: number, avgTime: number, correct: number, accuracy
 
   const wrongCount = results.filter(r => !r.isCorrect).length;
   if (wrongCount > 0) {
-    const wrongBtn = el<HTMLButtonElement>('button', 'btn-secondary', `틀린 문제 보기 (${wrongCount}개)`);
+    const btnText = currentLang === 'ko'
+      ? `틀린 문제 보기 (${wrongCount}개)`
+      : `Review Mistakes (${wrongCount})`;
+    const wrongBtn = el<HTMLButtonElement>('button', 'btn-secondary', btnText);
     wrongBtn.id = 'btn-wrong';
     wrongBtn.addEventListener('click', openWrongModal);
     actions.appendChild(wrongBtn);
   }
 
-  const retryBtn = el<HTMLButtonElement>('button', 'btn-primary', '첫 화면으로');
+  const retryBtn = el<HTMLButtonElement>('button', 'btn-primary', t('firstScreenBtn'));
   retryBtn.id = 'btn-retry';
   retryBtn.addEventListener('click', () => {
     currentInput = '';
@@ -464,8 +541,8 @@ function buildLeaderboard(onlyMode?: 'multiply' | 'divide'): HTMLElement {
   const section = el('div', 'leaderboard-section');
   
   const titleText = onlyMode 
-    ? `리더보드 (${onlyMode === 'multiply' ? 'Normal' : 'Reverse'})` 
-    : '리더보드';
+    ? `${t('leaderboardTitle')} (${onlyMode === 'multiply' ? 'Normal' : 'Reverse'})` 
+    : t('leaderboardTitle');
   const title = el('div', 'leaderboard-title', titleText);
   section.append(title);
 
@@ -482,16 +559,19 @@ function buildLeaderboard(onlyMode?: 'multiply' | 'divide'): HTMLElement {
 
     records.slice(0, 10).forEach((r, i) => {
       const item = el('div', i === 0 ? 'leaderboard-item gold' : 'leaderboard-item');
+      
+      const rankText = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+      
       item.innerHTML = `
-        <span class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}</span>
+        <span class="lb-rank">${rankText}</span>
         <span class="lb-date">${r.date}</span>
-        <span class="lb-stat">${r.avgTime.toFixed(1)}s/문제 · ${r.accuracy}%</span>
+        <span class="lb-stat">${r.avgTime.toFixed(1)}${t('secondsPerQuestion')} · ${r.accuracy}%</span>
       `;
       list.appendChild(item);
     });
 
     if (records.length === 0) {
-      list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">아직 기록이 없어요</div>';
+      list.innerHTML = `<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">${t('noRecords')}</div>`;
     }
   }
 
@@ -534,6 +614,7 @@ function buildLeaderboard(onlyMode?: 'multiply' | 'divide'): HTMLElement {
    Init
    ============================================= */
 function init() {
+  app.innerHTML = ''; // Clear existing contents for dynamic re-render in i18n
   buildHome();
   buildCountdown();
   buildGame();
